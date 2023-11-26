@@ -55,7 +55,7 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
             String sessionKey = header.getAppId() + UserSessionConstants + loginPack.getUserId();
 
             RMap<String, String> map = redissonClient.getMap(sessionKey);
-            // field: clientType  value: channel
+            // field: clientType  value: userSession
             map.put(String.valueOf(header.getClientType()), JSONObject.toJSONString(userSession));
 
             SessionSocketHolder.put(loginPack.getUserId(), ((NioSocketChannel) ctx.channel()));
