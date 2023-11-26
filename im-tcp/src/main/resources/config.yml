@@ -12,16 +12,16 @@ lim:
 #  #  *                            3 允许手机和电脑单设备 + web 同时在线 踢掉非本client+imel的同端设备
 #  #  *                            4 允许所有端多设备登录 不踢任何设备
 #
-#  redis:
-#    mode: single # 单机模式：single 哨兵模式：sentinel 集群模式：cluster
-#    database: 0
-#    password:
-#    timeout: 3000 # 超时时间
-#    poolMinIdle: 8 #最小空闲数
-#    poolConnTimeout: 3000 # 连接超时时间(毫秒)
-#    poolSize: 10 # 连接池大小
-#    single: #redis单机配置
-#      address: 127.0.0.1:6379
+  redis:
+    mode: single # 单机模式：single 哨兵模式：sentinel 集群模式：cluster
+    database: 0
+    password:
+    timeout: 3000 # 超时时间
+    poolMinIdle: 8 #最小空闲数
+    poolConnTimeout: 3000 # 连接超时时间(毫秒)
+    poolSize: 10 # 连接池大小
+    single: #redis单机配置
+      address: 192.168.56.10:6379
 #  rabbitmq:
 #    host: 127.0.0.1
 #    port: 5672

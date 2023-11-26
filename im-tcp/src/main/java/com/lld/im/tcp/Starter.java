@@ -1,6 +1,7 @@
 package com.lld.im.tcp;
 
 import com.lld.im.codec.config.BootstrapConfig;
+import com.lld.im.tcp.redis.RedisManager;
 import com.lld.im.tcp.server.LimServer;
 import com.lld.im.tcp.server.LimWebSocketServer;
 import org.yaml.snakeyaml.Yaml;
@@ -25,6 +26,8 @@ public class Starter {
         new LimServer(bootstrapConfig.getLim()).start();
 
         new LimWebSocketServer(bootstrapConfig.getLim()).start();
+
+        RedisManager.init(bootstrapConfig);
     }
 
 }
