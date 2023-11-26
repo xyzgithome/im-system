@@ -1,6 +1,8 @@
 package com.lld.im.tcp.server;
 
+import com.lld.im.codec.MessageDecoder;
 import com.lld.im.codec.config.BootstrapConfig.TcpConfig;
+import com.lld.im.tcp.handler.NettyServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -39,7 +41,9 @@ public class LimServer {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
-
+                        socketChannel.pipeline()
+                                .addLast(new MessageDecoder())
+                                .addLast(new NettyServerHandler());
                     }
                 });
     }
