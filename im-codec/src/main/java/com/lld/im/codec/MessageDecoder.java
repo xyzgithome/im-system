@@ -16,7 +16,7 @@ import java.util.List;
  * 版本号: 1.0 1.1 2.0
  * clientType: IOS 安卓 pc(windows mac) web
  * 消息解析类型: 支持json 也支持 protobuf
- * imei长度(标识具体clientType的哪个客户端，比如IOS的iPhone15pro)
+ * imei长度(标识具体clientType的哪个客户端, imei码相当于移动电话的身份证)
  * appId(标识具体接入IM系统的app)
  * bodylen(请求体长度)
  * 28 + imei + body
@@ -60,6 +60,11 @@ public class MessageDecoder extends ByteToMessageDecoder {
             return;
         }
 
+        /*
+        imei:国际移动设备识别码，英文名称是InternationalMobileEquipmentIdentity，简称IMEI，
+        即通常所说的手机序列号、手机串号。用于在移动电话网络中识别每一部独立的手机等移动通信设备，
+        相当于移动电话的身份证
+         */
         byte[] imeiData = new byte[imeiLength];
         in.readBytes(imeiData);
         String imei = new String(imeiData, CharsetUtil.UTF_8);

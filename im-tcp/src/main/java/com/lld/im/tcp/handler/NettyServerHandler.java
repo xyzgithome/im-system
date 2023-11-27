@@ -40,7 +40,9 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
             }.getType());
 
             // 为channel设置userId属性
-            ctx.channel().attr(AttributeKey.valueOf("userId")).set(loginPack.getUserId());
+            ctx.channel().attr(AttributeKey.valueOf(Constants.UserId)).set(loginPack.getUserId());
+            ctx.channel().attr(AttributeKey.valueOf(Constants.AppId)).set(header.getAppId());
+            ctx.channel().attr(AttributeKey.valueOf(Constants.ClientType)).set(header.getClientType());
 
             // 将channel分布式存储起来
             UserSession userSession = new UserSession();
@@ -53,12 +55,30 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
             RedissonClient redissonClient = RedisManager.getRedissonClient();
             // key: 用户session，appId + UserSessionConstants + 用户id 例如10000：userSession：lld
             String sessionKey = header.getAppId() + UserSessionConstants + loginPack.getUserId();
-
             RMap<String, String> map = redissonClient.getMap(sessionKey);
             // field: clientType  value: userSession
             map.put(String.valueOf(header.getClientType()), JSONObject.toJSONString(userSession));
 
-            SessionSocketHolder.put(loginPack.getUserId(), ((NioSocketChannel) ctx.channel()));
+            SessionSocketHolder.put(header.getAppId(), loginPack.getUserId(),
+                    header.getClientType(), ((NioSocketChannel) ctx.channel()));
+        } else if (Objects.equals(command, SystemCommand.LOGOUT.getCommand())) {
+            String userId = (String) ctx.channel().attr(AttributeKey.valueOf(Constants.UserId)).get();
+            Integer appId = (Integer) ctx.channel().attr(AttributeKey.valueOf(Constants.AppId)).get();
+            Integer clientType = (Integer) ctx.channel().attr(AttributeKey.valueOf(Constants.ClientType)).get();
+
+            // 删除内存中的session
+            SessionSocketHolder.remove(appId, userId, clientType);
+
+            // 删除redis中的session
+            String sessionKey = header.getAppId() + UserSessionConstants + userId;
+            RedissonClient redissonClient = RedisManager.getRedissonClient();
+            RMap<String, String> map = redissonClient.getMap(sessionKey);
+            if (Objects.nonNull(map)) {
+                map.remove(String.valueOf(clientType));
+            }
+
+            // 关闭channel
+            ctx.channel().close();
         }
     }
 }
