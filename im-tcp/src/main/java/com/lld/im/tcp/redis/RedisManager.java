@@ -7,10 +7,10 @@ public class RedisManager {
 
     private static RedissonClient redissonClient;
 
-    public static void init(BootstrapConfig config){
+    public static void init(BootstrapConfig.RedisConfig redisConfig){
         SingleClientStrategy singleClientStrategy = new SingleClientStrategy();
 
-        redissonClient = singleClientStrategy.getRedissonClient(config.getLim().getRedis());
+        redissonClient = singleClientStrategy.getRedissonClient(redisConfig);
     }
 
     public static RedissonClient getRedissonClient(){
