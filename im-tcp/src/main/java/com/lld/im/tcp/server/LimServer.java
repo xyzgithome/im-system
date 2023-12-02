@@ -2,6 +2,7 @@ package com.lld.im.tcp.server;
 
 import com.lld.im.codec.MessageDecoder;
 import com.lld.im.codec.config.BootstrapConfig.TcpConfig;
+import com.lld.im.tcp.handler.HeartBeatHandler;
 import com.lld.im.tcp.handler.NettyServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -9,6 +10,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -43,6 +45,8 @@ public class LimServer {
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         socketChannel.pipeline()
                                 .addLast(new MessageDecoder())
+                                .addLast(new IdleStateHandler(0,0,1))
+                                .addLast(new HeartBeatHandler(tcpConfig.getHeartBeatTime()))
                                 .addLast(new NettyServerHandler());
                     }
                 });
