@@ -3,6 +3,7 @@ package com.lld.im.tcp;
 import com.lld.im.codec.config.BootstrapConfig;
 import com.lld.im.tcp.receiver.MessageReceiver;
 import com.lld.im.tcp.redis.RedisManager;
+import com.lld.im.tcp.register.ZKManager;
 import com.lld.im.tcp.server.LimServer;
 import com.lld.im.tcp.server.LimWebSocketServer;
 import com.lld.im.tcp.utils.MqFactory;
@@ -34,6 +35,8 @@ public class Starter {
         MqFactory.init(bootstrapConfig.getLim().getRabbitmq());
 
         MessageReceiver.init();
+
+        ZKManager.init(bootstrapConfig.getLim());
     }
 
 }
