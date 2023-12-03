@@ -5,7 +5,9 @@ package com.lld.im.common;
  * @description:
  **/
 public enum ClientType {
-
+    /**
+     * web端通过接口调用服务端api
+     */
     WEBAPI(0,"webApi"),
     WEB(1,"web"),
     IOS(2,"ios"),

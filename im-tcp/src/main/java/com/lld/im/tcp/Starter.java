@@ -30,7 +30,7 @@ public class Starter {
 
         new LimWebSocketServer(bootstrapConfig.getLim()).start();
 
-        RedisManager.init(bootstrapConfig.getLim().getRedis());
+        RedisManager.init(bootstrapConfig.getLim());
 
         MqFactory.init(bootstrapConfig.getLim().getRabbitmq());
 

@@ -14,8 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.lld.im.common.constant.Constants.RedisConstants.UserSessionConstants;
@@ -40,6 +39,20 @@ public class SessionSocketHolder {
         userClientDto.setAppId(appId);
         userClientDto.setImei(imei);
         return CHANNEL_MAP.get(userClientDto);
+    }
+
+    public static List<NioSocketChannel> get(Integer appId , String id) {
+
+        Set<UserClientDto> channelInfos = CHANNEL_MAP.keySet();
+        List<NioSocketChannel> channels = new ArrayList<>();
+
+        channelInfos.forEach(channel ->{
+            if(channel.getAppId().equals(appId) && id.equals(channel.getUserId())){
+                channels.add(CHANNEL_MAP.get(channel));
+            }
+        });
+
+        return channels;
     }
 
     public static void remove(Integer appId, String userId, Integer clientType, String imei){

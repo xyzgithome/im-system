@@ -1,6 +1,7 @@
 package com.lld.im.tcp.server;
 
 import com.lld.im.codec.MessageDecoder;
+import com.lld.im.codec.MessageEncoder;
 import com.lld.im.codec.config.BootstrapConfig.TcpConfig;
 import com.lld.im.tcp.handler.HeartBeatHandler;
 import com.lld.im.tcp.handler.NettyServerHandler;
@@ -45,7 +46,8 @@ public class LimServer {
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         socketChannel.pipeline()
                                 .addLast(new MessageDecoder())
-                                .addLast(new IdleStateHandler(0,0,1))
+                                .addLast(new MessageEncoder())
+//                                .addLast(new IdleStateHandler(0,0,1))
                                 .addLast(new HeartBeatHandler(tcpConfig.getHeartBeatTime()))
                                 .addLast(new NettyServerHandler(tcpConfig.getBrokerId()));
                     }
