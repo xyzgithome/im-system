@@ -13,7 +13,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RTopic;
-import org.redisson.api.listener.MessageListener;
 
 import java.util.List;
 
