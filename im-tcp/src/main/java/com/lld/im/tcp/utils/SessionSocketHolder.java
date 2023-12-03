@@ -24,27 +24,30 @@ public class SessionSocketHolder {
 
     private static final Map<UserClientDto, NioSocketChannel> CHANNEL_MAP = new ConcurrentHashMap<>();
 
-    public static void put(Integer appId, String userId, Integer clientType, NioSocketChannel channel){
+    public static void put(Integer appId, String userId, Integer clientType, String imei, NioSocketChannel channel){
         UserClientDto userClientDto = new UserClientDto();
         userClientDto.setUserId(userId);
         userClientDto.setClientType(clientType);
         userClientDto.setAppId(appId);
+        userClientDto.setImei(imei);
         CHANNEL_MAP.put(userClientDto, channel);
     }
 
-    public static NioSocketChannel get(Integer appId, String userId, Integer clientType){
+    public static NioSocketChannel get(Integer appId, String userId, Integer clientType, String imei){
         UserClientDto userClientDto = new UserClientDto();
         userClientDto.setUserId(userId);
         userClientDto.setClientType(clientType);
         userClientDto.setAppId(appId);
+        userClientDto.setImei(imei);
         return CHANNEL_MAP.get(userClientDto);
     }
 
-    public static void remove(Integer appId, String userId, Integer clientType){
+    public static void remove(Integer appId, String userId, Integer clientType, String imei){
         UserClientDto userClientDto = new UserClientDto();
         userClientDto.setUserId(userId);
         userClientDto.setClientType(clientType);
         userClientDto.setAppId(appId);
+        userClientDto.setImei(imei);
         CHANNEL_MAP.remove(userClientDto);
     }
 
@@ -63,15 +66,17 @@ public class SessionSocketHolder {
         String userId = (String) channel.attr(AttributeKey.valueOf(Constants.UserId)).get();
         Integer appId = (Integer) channel.attr(AttributeKey.valueOf(Constants.AppId)).get();
         Integer clientType = (Integer) channel.attr(AttributeKey.valueOf(Constants.ClientType)).get();
+        String imei = (String) channel.attr(AttributeKey.valueOf(Constants.Imei)).get();
 
         // 删除内存中的session
-        SessionSocketHolder.remove(appId, userId, clientType);
+        SessionSocketHolder.remove(appId, userId, clientType, imei);
 
         // 删除redis中的session
         String sessionKey = appId + UserSessionConstants + userId;
         RedissonClient redissonClient = RedisManager.getRedissonClient();
         RMap<String, String> map = redissonClient.getMap(sessionKey);
-        map.remove(String.valueOf(clientType));
+        String sessionField = clientType + ":" +imei;
+        map.remove(sessionField);
 
         // 关闭channel
         channel.close();
@@ -86,16 +91,18 @@ public class SessionSocketHolder {
         String userId = (String) channel.attr(AttributeKey.valueOf(Constants.UserId)).get();
         Integer appId = (Integer) channel.attr(AttributeKey.valueOf(Constants.AppId)).get();
         Integer clientType = (Integer) channel.attr(AttributeKey.valueOf(Constants.ClientType)).get();
+        String imei = (String) channel.attr(AttributeKey.valueOf(Constants.Imei)).get();
 
         // 删除内存中的session
-        SessionSocketHolder.remove(appId, userId, clientType);
+        SessionSocketHolder.remove(appId, userId, clientType, imei);
 
         // 更新redis中session的状态为下线
         String sessionKey = appId + UserSessionConstants + userId;
         RedissonClient redissonClient = RedisManager.getRedissonClient();
         RMap<String, String> map = redissonClient.getMap(sessionKey);
 
-        String sessionValue = map.get(String.valueOf(clientType));
+        String sessionField = clientType + ":" +imei;
+        String sessionValue = map.get(sessionField);
 
         if (StringUtils.isNotBlank(sessionValue)) {
             UserSession userSession = JSON.parseObject(sessionValue, new TypeReference<UserSession>() {
@@ -103,7 +110,7 @@ public class SessionSocketHolder {
 
             userSession.setConnectState(ImConnectStatusEnum.OFFLINE_STATUS.getCode());
 
-            map.put(String.valueOf(clientType), JSONObject.toJSONString(userSession));
+            map.put(sessionField, JSONObject.toJSONString(userSession));
         }
 
         // 关闭channel

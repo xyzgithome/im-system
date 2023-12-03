@@ -50,6 +50,7 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
             ctx.channel().attr(AttributeKey.valueOf(Constants.UserId)).set(loginPack.getUserId());
             ctx.channel().attr(AttributeKey.valueOf(Constants.AppId)).set(header.getAppId());
             ctx.channel().attr(AttributeKey.valueOf(Constants.ClientType)).set(header.getClientType());
+            ctx.channel().attr(AttributeKey.valueOf(Constants.Imei)).set(header.getImei());
 
             // 将channel分布式存储起来
             UserSession userSession = new UserSession();
@@ -65,11 +66,13 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
             // key: 用户session，appId + UserSessionConstants + 用户id 例如10000：userSession：lld
             String sessionKey = header.getAppId() + UserSessionConstants + loginPack.getUserId();
             RMap<String, String> map = redissonClient.getMap(sessionKey);
-            // field: clientType  value: userSession
-            map.put(String.valueOf(header.getClientType()), JSONObject.toJSONString(userSession));
+            // field: clientType:imei  value: userSession
+            String sessionField = header.getClientType() + ":" + header.getImei();
+            map.put(sessionField, JSONObject.toJSONString(userSession));
 
+            // 存入内存 map中
             SessionSocketHolder.put(header.getAppId(), loginPack.getUserId(),
-                    header.getClientType(), ((NioSocketChannel) ctx.channel()));
+                    header.getClientType(), header.getImei(), ((NioSocketChannel) ctx.channel()));
         } else if (Objects.equals(command, SystemCommand.LOGOUT.getCommand())) {
 
             SessionSocketHolder.removeSession(((NioSocketChannel) ctx.channel()));
