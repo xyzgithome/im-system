@@ -34,7 +34,7 @@ public class Starter {
 
         MqFactory.init(bootstrapConfig.getLim().getRabbitmq());
 
-        MessageReceiver.init();
+        MessageReceiver.init(bootstrapConfig.getLim().getBrokerId());
 
         ZKManager.init(bootstrapConfig.getLim());
     }

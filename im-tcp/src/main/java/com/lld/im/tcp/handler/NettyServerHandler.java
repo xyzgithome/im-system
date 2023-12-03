@@ -20,12 +20,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 
+import java.net.InetAddress;
 import java.util.Objects;
 
 import static com.lld.im.common.constant.Constants.RedisConstants.UserSessionConstants;
 
 @Slf4j
 public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
+    private Integer brokerId;
+
+    public NettyServerHandler(Integer brokerId) {
+        this.brokerId = brokerId;
+    }
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Message message) throws Exception {
         MessageHeader header = message.getMessageHeader();
@@ -50,6 +57,8 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
             userSession.setAppId(header.getAppId());
             userSession.setClientType(header.getClientType());
             userSession.setConnectState(ImConnectStatusEnum.ONLINE_STATUS.getCode());
+            userSession.setBrokerHost(InetAddress.getLocalHost().getHostAddress());
+            userSession.setBrokerId(brokerId);
 
             // 存入redis map中
             RedissonClient redissonClient = RedisManager.getRedissonClient();

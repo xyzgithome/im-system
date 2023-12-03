@@ -47,7 +47,7 @@ public class LimServer {
                                 .addLast(new MessageDecoder())
                                 .addLast(new IdleStateHandler(0,0,1))
                                 .addLast(new HeartBeatHandler(tcpConfig.getHeartBeatTime()))
-                                .addLast(new NettyServerHandler());
+                                .addLast(new NettyServerHandler(tcpConfig.getBrokerId()));
                     }
                 });
     }

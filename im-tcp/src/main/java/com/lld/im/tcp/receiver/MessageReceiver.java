@@ -8,27 +8,33 @@ import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
+import java.util.Objects;
 
 @Slf4j
 public class MessageReceiver {
+    private static Integer brokerId;
 
-    public static void init () {
+    public static void init (Integer brokerId) {
+        if (Objects.isNull(MessageReceiver.brokerId)) {
+            MessageReceiver.brokerId = brokerId;
+        }
         startReceiverMessage();
     }
 
 
     private static void startReceiverMessage () {
         try {
-            Channel channel = MqFactory.getChannel(Constants.RabbitConstants.MessageService2Im);
 
-            channel.queueDeclare(Constants.RabbitConstants.MessageService2Im, true, false, false, null);
+            String channelName = Constants.RabbitConstants.MessageService2Im + brokerId;
+            String queueName = Constants.RabbitConstants.MessageService2Im + brokerId;
+            String exchangeName = Constants.RabbitConstants.MessageService2Im;
 
-            channel.queueBind(Constants.RabbitConstants.MessageService2Im, Constants.RabbitConstants.MessageService2Im, "");
-
-            channel.basicConsume(Constants.RabbitConstants.MessageService2Im, false, new DefaultConsumer(channel){
+            Channel channel = MqFactory.getChannel(channelName);
+            channel.queueDeclare(queueName, true, false, false, null);
+            channel.queueBind(queueName, exchangeName, String.valueOf(brokerId));
+            channel.basicConsume(queueName, false, new DefaultConsumer(channel){
                 @Override
-                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
                     // TODO 处理消息服务发来的消息
                     String msg = new String(body);
                     log.info("----------" + msg);
