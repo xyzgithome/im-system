@@ -17,7 +17,7 @@ public class TreeMapConsistentHashRouteHandler extends AbstractConsistentHash im
     private TreeMap<Long, String> treeMap = new TreeMap<>();
 
     /**
-     * 虚拟节点数
+     * 虚拟节点数, 虚拟节点越多，负载均衡效果越好
      */
     private static final int NODE_SIZE = 2;
 

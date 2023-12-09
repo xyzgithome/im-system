@@ -1,13 +1,12 @@
 package com.lld.im.service.user.controller;
 
-import com.lld.im.common.ClientType;
 import com.lld.im.common.ResponseVO;
 import com.lld.im.common.config.AppConfig;
 import com.lld.im.common.route.handler.RouteHandler;
 import com.lld.im.common.route.RouteInfo;
+import com.lld.im.common.utils.RouteInfoParseUtil;
 import com.lld.im.service.user.model.req.*;
 import com.lld.im.service.user.service.ImUserService;
-import com.lld.im.service.utils.RouteInfoParseUtil;
 import com.lld.im.service.utils.ZKit;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @RestController
 @RequestMapping("v1/user")

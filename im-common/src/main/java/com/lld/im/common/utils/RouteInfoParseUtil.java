@@ -1,4 +1,4 @@
-package com.lld.im.service.utils;
+package com.lld.im.common.utils;
 
 
 import com.lld.im.common.BaseErrorCode;
