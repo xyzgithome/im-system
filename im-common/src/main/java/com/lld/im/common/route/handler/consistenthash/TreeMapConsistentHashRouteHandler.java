@@ -13,7 +13,7 @@ import java.util.TreeMap;
  * hash一致性算法实现节点分配
  */
 @Component(value = "routeHandler-3")
-public class ConsistentHashTreeMapRouteHandler extends AbstractConsistentHash implements RouteHandler {
+public class TreeMapConsistentHashRouteHandler extends AbstractConsistentHash implements RouteHandler {
     private TreeMap<Long, String> treeMap = new TreeMap<>();
 
     /**
