@@ -7,10 +7,7 @@ import com.lld.im.common.enums.UserErrorCode;
 import com.lld.im.common.exception.ApplicationException;
 import com.lld.im.service.user.dao.ImUserDataEntity;
 import com.lld.im.service.user.dao.mapper.ImUserDataMapper;
-import com.lld.im.service.user.model.req.DeleteUserReq;
-import com.lld.im.service.user.model.req.GetUserInfoReq;
-import com.lld.im.service.user.model.req.ImportUserReq;
-import com.lld.im.service.user.model.req.ModifyUserInfoReq;
+import com.lld.im.service.user.model.req.*;
 import com.lld.im.service.user.model.resp.GetUserInfoResp;
 import com.lld.im.service.user.model.resp.ImportUserResp;
 import com.lld.im.service.user.service.ImUserService;
@@ -166,6 +163,12 @@ public class ImUserServiceImpl implements ImUserService {
             return ResponseVO.success();
         }
         throw new ApplicationException(UserErrorCode.MODIFY_USER_ERROR);
+    }
+
+    @Override
+    public ResponseVO login(LoginReq req) {
+        // TODO sdk登录业务逻辑，单点登录
+        return ResponseVO.success();
     }
 
 }
