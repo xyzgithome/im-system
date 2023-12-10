@@ -45,7 +45,7 @@ public class ImUserController {
         return imUserService.deleteUser(req);
     }
 
-    @RequestMapping("/login")
+    @PostMapping("/login")
     public ResponseVO login(@RequestBody @Validated LoginReq req) {
         ResponseVO login = imUserService.login(req);
 

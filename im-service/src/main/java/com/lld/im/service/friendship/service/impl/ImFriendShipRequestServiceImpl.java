@@ -84,7 +84,6 @@ public class ImFriendShipRequestServiceImpl implements ImFriendShipRequestServic
     @Override
     @Transactional
     public ResponseVO approveFriendRequest(ApproverFriendRequestReq req) {
-
         ImFriendShipRequestEntity imFriendShipRequestEntity = imFriendShipRequestMapper.selectById(req.getId());
         if (imFriendShipRequestEntity == null) {
             throw new ApplicationException(FriendShipErrorCode.FRIEND_REQUEST_IS_NOT_EXIST);
@@ -109,7 +108,7 @@ public class ImFriendShipRequestServiceImpl implements ImFriendShipRequestServic
             dto.setRemark(imFriendShipRequestEntity.getRemark());
             dto.setToId(imFriendShipRequestEntity.getToId());
             ResponseVO responseVO = imFriendShipService
-                    .doAddFriend(req, imFriendShipRequestEntity.getFromId(), dto, req.getAppId());
+                    .doAddFriend(imFriendShipRequestEntity.getFromId(), dto, req.getAppId());
 
             if (!responseVO.isOk() && responseVO.getCode() != FriendShipErrorCode.TO_IS_YOUR_FRIEND.getCode()) {
                 return responseVO;

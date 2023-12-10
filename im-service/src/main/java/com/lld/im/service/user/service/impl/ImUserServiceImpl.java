@@ -163,22 +163,23 @@ public class ImUserServiceImpl implements ImUserService {
             throw new ApplicationException(UserErrorCode.USER_IS_NOT_EXIST);
         }
 
-        ImUserDataEntity update = new ImUserDataEntity();
-        BeanUtils.copyProperties(req, update);
+        ImUserDataEntity userDataEntity = new ImUserDataEntity();
+        BeanUtils.copyProperties(req, userDataEntity);
 
-        update.setAppId(null);
-        update.setUserId(null);
-        int update1 = imUserDataMapper.update(update, query);
-        if (update1 == 1) {
-            // 修改用户信息后回调
-            if (appConfig.isModifyUserAfterCallback()) {
-                callbackService.afterCallback(req.getAppId(),
-                        Constants.CallbackCommand.ModifyUserAfter, JSONObject.toJSONString(req));
-            }
-
-            return ResponseVO.success();
+        userDataEntity.setAppId(null);
+        userDataEntity.setUserId(null);
+        int update = imUserDataMapper.update(userDataEntity, query);
+        if (update != 1) {
+            throw new ApplicationException(UserErrorCode.MODIFY_USER_ERROR);
         }
-        throw new ApplicationException(UserErrorCode.MODIFY_USER_ERROR);
+
+        // 修改用户信息后回调
+        if (appConfig.isModifyUserAfterCallback()) {
+            callbackService.afterCallback(req.getAppId(),
+                    Constants.CallbackCommand.ModifyUserAfter, JSONObject.toJSONString(req));
+        }
+
+        return ResponseVO.success();
     }
 
     @Override
