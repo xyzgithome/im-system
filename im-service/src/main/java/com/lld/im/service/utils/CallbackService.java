@@ -51,8 +51,8 @@ public class CallbackService {
      */
     public ResponseVO beforeCallback(Integer appId, String callbackCommand, String jsonBody) {
         try {
-            return httpRequestUtils.doPost("", ResponseVO.class, builderUrlParams(appId, callbackCommand),
-                    jsonBody, null);
+            return httpRequestUtils.doPost(appConfig.getCallbackUrl(), ResponseVO.class,
+                    builderUrlParams(appId, callbackCommand), jsonBody, StandardCharsets.UTF_8.name());
         } catch (Exception e) {
             log.error("callback 之前 回调{} : {}出现异常 ： {} ", callbackCommand, appId, e.getMessage());
             return ResponseVO.fail();
