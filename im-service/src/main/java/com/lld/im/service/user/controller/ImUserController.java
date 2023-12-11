@@ -45,6 +45,13 @@ public class ImUserController {
         return imUserService.deleteUser(req);
     }
 
+    /**
+     * sdk上绑定一个域名，域名要是挂了，sdk就挂了
+     * 所以需要开辟一个接口，让客户端动态的获取tcp网关的地址
+     *
+     * @param req req
+     * @return rsp
+     */
     @PostMapping("/login")
     public ResponseVO login(@RequestBody @Validated LoginReq req) {
         ResponseVO login = imUserService.login(req);
