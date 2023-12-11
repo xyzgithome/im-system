@@ -2,7 +2,9 @@ package com.lld.im.service.user.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.lld.im.codec.pack.user.UserModifyPack;
 import com.lld.im.common.ResponseVO;
+import com.lld.im.common.command.UserEventCommand;
 import com.lld.im.common.config.AppConfig;
 import com.lld.im.common.constant.Constants;
 import com.lld.im.common.enums.DelFlagEnum;
@@ -15,6 +17,7 @@ import com.lld.im.service.user.model.resp.GetUserInfoResp;
 import com.lld.im.service.user.model.resp.ImportUserResp;
 import com.lld.im.service.user.service.ImUserService;
 import com.lld.im.service.utils.CallbackService;
+import com.lld.im.service.utils.MessageProducer;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +44,9 @@ public class ImUserServiceImpl implements ImUserService {
 
     @Resource
     private CallbackService callbackService;
+
+    @Resource
+    private MessageProducer messageProducer;
 
     @Override
     public ResponseVO importUser(ImportUserReq req) {
@@ -173,12 +179,17 @@ public class ImUserServiceImpl implements ImUserService {
             throw new ApplicationException(UserErrorCode.MODIFY_USER_ERROR);
         }
 
+        // 修改用户信息-多端数据同步
+        UserModifyPack userModifyPack = new UserModifyPack();
+        BeanUtils.copyProperties(req, userModifyPack);
+        messageProducer.sendToUser(req.getUserId(), req.getClientType(), req.getImei(),
+                UserEventCommand.USER_MODIFY, userModifyPack, req.getAppId());
+
         // 修改用户信息后回调
         if (appConfig.isModifyUserAfterCallback()) {
             callbackService.afterCallback(req.getAppId(),
                     Constants.CallbackCommand.ModifyUserAfter, JSONObject.toJSONString(req));
         }
-
         return ResponseVO.success();
     }
 

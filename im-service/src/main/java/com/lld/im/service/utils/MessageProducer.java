@@ -25,6 +25,18 @@ public class MessageProducer {
     @Resource
     private UserSessionUtils userSessionUtils;
 
+    /**
+     * 由于调用该方法的接口可能由appClient调用，也有可能是app管理员调用，
+     * 如果是前者，则只需要发送消息给除去本段的其他客户端即可，
+     * 如果是后者则需要所有端都要通知到
+     *
+     * @param toId 发送给谁的userId
+     * @param clientType 客户端类型
+     * @param imei imei号
+     * @param command 指令
+     * @param data 发送的数据
+     * @param appId appId
+     */
     public void sendToUser(String toId, Integer clientType, String imei, Command command,
                            Object data, Integer appId) {
         if (clientType != null && StringUtils.isNotBlank(imei)) {
