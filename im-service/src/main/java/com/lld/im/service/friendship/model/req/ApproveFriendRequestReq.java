@@ -5,7 +5,7 @@ import lombok.Data;
 
 
 @Data
-public class ApproverFriendRequestReq extends RequestBase {
+public class ApproveFriendRequestReq extends RequestBase {
 
     private Long id;
 

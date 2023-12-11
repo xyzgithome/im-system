@@ -3,7 +3,9 @@ package com.lld.im.service.friendship.service.impl;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.lld.im.codec.pack.friendship.*;
 import com.lld.im.common.ResponseVO;
+import com.lld.im.common.command.FriendshipEventCommand;
 import com.lld.im.common.config.AppConfig;
 import com.lld.im.common.constant.Constants;
 import com.lld.im.common.enums.AllowFriendTypeEnum;
@@ -23,12 +25,15 @@ import com.lld.im.service.friendship.service.ImFriendShipRequestService;
 import com.lld.im.service.user.dao.ImUserDataEntity;
 import com.lld.im.service.user.service.ImUserService;
 import com.lld.im.service.utils.CallbackService;
+import com.lld.im.service.utils.MessageProducer;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +63,9 @@ public class ImFriendServiceImpl implements ImFriendService {
 
     @Resource
     private ImFriendShipRequestService imFriendShipRequestService;
+
+    @Resource
+    private MessageProducer messageProducer;
 
     @Override
     public ResponseVO importFriendShip(ImportFriendShipReq req) {
@@ -107,7 +115,7 @@ public class ImFriendServiceImpl implements ImFriendService {
             return toInfo;
         }
 
-        // 之前回调
+        // 添加好友之前回调
         if (appConfig.isAddFriendBeforeCallback()) {
             ResponseVO responseVO = callbackService.beforeCallback(req.getAppId(),
                     Constants.CallbackCommand.AddFriendBefore, JSONObject.toJSONString(req));
@@ -118,30 +126,27 @@ public class ImFriendServiceImpl implements ImFriendService {
 
         ImUserDataEntity data = toInfo.getData();
 
+        // 没有开启好友验证，A可以直接加B为好友
         if (data.getFriendAllowType() != null && data.getFriendAllowType() == AllowFriendTypeEnum.NOT_NEED.getCode()) {
-            return this.doAddFriend(req.getFromId(), req.getToItem(), req.getAppId());
+            return this.doAddFriend(req);
         } else {
+            // 用户B开启好友请求验证，不用多端同步数据给A的其他端，需要同步数据给B的所有端
             QueryWrapper<ImFriendShipEntity> query = new QueryWrapper<>();
             query.eq("app_id", req.getAppId());
             query.eq("from_id", req.getFromId());
             query.eq("to_id", req.getToItem().getToId());
             ImFriendShipEntity fromItem = imFriendShipMapper.selectOne(query);
-            if (fromItem == null || fromItem.getStatus()
-                    != FriendShipStatusEnum.FRIEND_STATUS_NORMAL.getCode()) {
+            if (fromItem == null
+                    || fromItem.getStatus() != FriendShipStatusEnum.FRIEND_STATUS_NORMAL.getCode()) {
                 //插入一条好友申请的数据
-                ResponseVO responseVO = imFriendShipRequestService.addFriendshipRequest(req.getFromId(), req.getToItem(), req.getAppId());
+                ResponseVO responseVO = imFriendShipRequestService
+                        .addFriendshipRequest(req.getFromId(), req.getToItem(), req.getAppId());
                 if (!responseVO.isOk()) {
                     return responseVO;
                 }
             } else {
                 return ResponseVO.fail(FriendShipErrorCode.TO_IS_YOUR_FRIEND);
             }
-        }
-        // 添加好友后回调
-        if (appConfig.isAddFriendAfterCallback()) {
-            callbackService.afterCallback(req.getAppId(),
-                    Constants.CallbackCommand.ModifyUserAfter,
-                    JSONObject.toJSONString(req));
         }
         return ResponseVO.success();
     }
@@ -158,17 +163,21 @@ public class ImFriendServiceImpl implements ImFriendService {
             return toInfo;
         }
 
-        return this.doUpdate(req.getFromId(), req.getToItem(), req.getAppId());
+        return this.doUpdate(req);
     }
 
     @Transactional
-    public ResponseVO doUpdate(String fromId, FriendDto dto, Integer appId) {
+    public ResponseVO doUpdate(UpdateFriendReq req) {
+        String fromId = req.getFromId();
+        Integer appId = req.getAppId();
+        FriendDto toItem = req.getToItem();
+
         UpdateWrapper<ImFriendShipEntity> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.lambda().set(ImFriendShipEntity::getAddSource, dto.getAddSource())
-                .set(ImFriendShipEntity::getExtra, dto.getExtra())
-                .set(ImFriendShipEntity::getRemark, dto.getRemark())
+        updateWrapper.lambda().set(ImFriendShipEntity::getAddSource, toItem.getAddSource())
+                .set(ImFriendShipEntity::getExtra, toItem.getExtra())
+                .set(ImFriendShipEntity::getRemark, toItem.getRemark())
                 .eq(ImFriendShipEntity::getAppId, appId)
-                .eq(ImFriendShipEntity::getToId, dto.getToId())
+                .eq(ImFriendShipEntity::getToId, toItem.getToId())
                 .eq(ImFriendShipEntity::getFromId, fromId);
 
         int update = imFriendShipMapper.update(null, updateWrapper);
@@ -176,31 +185,42 @@ public class ImFriendServiceImpl implements ImFriendService {
             return ResponseVO.fail();
         }
 
+        // 更新好友-多端数据同步
+        // A更新B好友信息，需要通知用户A除去本端的其他客户端
+        UpdateFriendPack updateFriendPack = new UpdateFriendPack();
+        BeanUtils.copyProperties(toItem, updateFriendPack);
+        messageProducer.sendToUser(fromId, req.getClientType(), req.getImei(),
+                FriendshipEventCommand.FRIEND_UPDATE, updateFriendPack, appId);
+
         // 更新好友后回调
         if (appConfig.isModifyFriendAfterCallback()) {
             callbackService.afterCallback(appId, Constants.CallbackCommand.UpdateFriendAfter,
-                    JSONObject.toJSONString(new AddFriendAfterCallbackDto().setFromId(fromId).setToItem(dto)));
+                    JSONObject.toJSONString(new AddFriendAfterCallbackDto().setFromId(fromId).setToItem(toItem)));
         }
         return ResponseVO.success();
     }
 
     @Override
     @Transactional
-    public ResponseVO doAddFriend(String fromId, FriendDto dto, Integer appId) {
+    public ResponseVO doAddFriend(AddFriendReq req) {
+        Integer appId = req.getAppId();
+        String fromId = req.getFromId();
+        FriendDto dto = req.getToItem();
+        String toId = dto.getToId();
+
         //A-B
         //Friend表插入A 和 B 两条记录
         //查询是否有记录存在，如果存在则判断状态，如果是已添加，则提示已添加，如果是未添加，则修改状态
         QueryWrapper<ImFriendShipEntity> query = new QueryWrapper<>();
         query.eq("app_id", appId);
         query.eq("from_id", fromId);
-        query.eq("to_id", dto.getToId());
+        query.eq("to_id", toId);
         ImFriendShipEntity fromItem = imFriendShipMapper.selectOne(query);
         if (fromItem == null) {
-            //走添加逻辑。
+            // 走添加逻辑
             fromItem = new ImFriendShipEntity();
             fromItem.setAppId(appId);
             fromItem.setFromId(fromId);
-//            entity.setToId(to);
             BeanUtils.copyProperties(dto, fromItem);
             fromItem.setStatus(FriendShipStatusEnum.FRIEND_STATUS_NORMAL.getCode());
             fromItem.setCreateTime(System.currentTimeMillis());
@@ -209,7 +229,7 @@ public class ImFriendServiceImpl implements ImFriendService {
                 return ResponseVO.fail(FriendShipErrorCode.ADD_FRIEND_ERROR);
             }
         } else {
-            //如果存在则判断状态，如果是已添加，则提示已添加，如果是未添加，则修改状态
+            // 如果存在则判断状态，如果是已添加，则提示已添加，如果是未添加，则修改状态
             if (fromItem.getStatus() == FriendShipStatusEnum.FRIEND_STATUS_NORMAL.getCode()) {
                 return ResponseVO.fail(FriendShipErrorCode.TO_IS_YOUR_FRIEND);
             } else {
@@ -233,18 +253,17 @@ public class ImFriendServiceImpl implements ImFriendService {
                     return ResponseVO.fail(FriendShipErrorCode.ADD_FRIEND_ERROR);
                 }
             }
-
         }
 
         QueryWrapper<ImFriendShipEntity> toQuery = new QueryWrapper<>();
         toQuery.eq("app_id", appId);
-        toQuery.eq("from_id", dto.getToId());
+        toQuery.eq("from_id", toId);
         toQuery.eq("to_id", fromId);
         ImFriendShipEntity toItem = imFriendShipMapper.selectOne(toQuery);
         if (toItem == null) {
             toItem = new ImFriendShipEntity();
             toItem.setAppId(appId);
-            toItem.setFromId(dto.getToId());
+            toItem.setFromId(toId);
             BeanUtils.copyProperties(dto, toItem);
             toItem.setToId(fromId);
             toItem.setStatus(FriendShipStatusEnum.FRIEND_STATUS_NORMAL.getCode());
@@ -259,9 +278,22 @@ public class ImFriendServiceImpl implements ImFriendService {
             }
         }
 
+        // 添加好友-多端数据同步
+        // A添加B为好友，需要通知用户A除去本端的其他客户端
+        AddFriendPack addFriendPackFrom = new AddFriendPack();
+        BeanUtils.copyProperties(fromItem, addFriendPackFrom);
+        messageProducer.sendToUser(fromId, req.getClientType(), req.getImei(),
+                FriendshipEventCommand.FRIEND_ADD, addFriendPackFrom, appId);
+
+        // 需要通知用户B的所有客户端
+        AddFriendPack addFriendPackTo = new AddFriendPack();
+        BeanUtils.copyProperties(toItem, addFriendPackTo);
+        messageProducer.sendToUser(toId,
+                FriendshipEventCommand.FRIEND_ADD, addFriendPackTo, appId);
+
         // 添加好友后回调
         if (appConfig.isAddFriendAfterCallback()) {
-            callbackService.afterCallback(appId, Constants.CallbackCommand.ModifyUserAfter,
+            callbackService.afterCallback(appId, Constants.CallbackCommand.AddFriendAfter,
                     JSONObject.toJSONString(new AddFriendAfterCallbackDto().setFromId(fromId).setToItem(dto)));
         }
 
@@ -289,6 +321,13 @@ public class ImFriendServiceImpl implements ImFriendService {
         update.setStatus(FriendShipStatusEnum.FRIEND_STATUS_DELETE.getCode());
         imFriendShipMapper.update(update, query);
 
+        // 删除好友-多端数据同步
+        // A删除B，需要通知用户A除去本端的其他客户端
+        DeleteFriendPack deleteFriendPack = new DeleteFriendPack();
+        BeanUtils.copyProperties(req, deleteFriendPack);
+        messageProducer.sendToUser(req.getFromId(), req.getClientType(), req.getImei(),
+                FriendshipEventCommand.FRIEND_DELETE, deleteFriendPack, req.getAppId());
+
         // 删除好友后回调
         if (appConfig.isDeleteFriendAfterCallback()) {
             callbackService.afterCallback(req.getAppId(),
@@ -308,6 +347,14 @@ public class ImFriendServiceImpl implements ImFriendService {
         ImFriendShipEntity update = new ImFriendShipEntity();
         update.setStatus(FriendShipStatusEnum.FRIEND_STATUS_DELETE.getCode());
         imFriendShipMapper.update(update, query);
+
+        // 删除所有好友-多端数据同步
+        // A删除B C D，需要通知用户A除去本端的其他客户端
+        DeleteAllFriendPack deleteAllFriendPack = new DeleteAllFriendPack();
+        BeanUtils.copyProperties(req, deleteAllFriendPack);
+        messageProducer.sendToUser(req.getFromId(), req.getClientType(), req.getImei(),
+                FriendshipEventCommand.FRIEND_ALL_DELETE, deleteAllFriendPack, req.getAppId());
+
         return ResponseVO.success();
     }
 
@@ -409,6 +456,13 @@ public class ImFriendServiceImpl implements ImFriendService {
             }
         }
 
+        // 添加黑名单-多端数据同步
+        // A添加B到黑名单，需要通知用户A除去本端的其他客户端
+        AddFriendBlackPack addFriendBlackPack = new AddFriendBlackPack();
+        BeanUtils.copyProperties(req, addFriendBlackPack);
+        messageProducer.sendToUser(req.getFromId(), req.getClientType(), req.getImei(),
+                FriendshipEventCommand.FRIEND_BLACK_ADD, addFriendBlackPack, req.getAppId());
+
         // 新增黑名单后回调
         if (appConfig.isAddFriendShipBlackAfterCallback()) {
             callbackService.afterCallback(req.getAppId(),
@@ -443,6 +497,13 @@ public class ImFriendServiceImpl implements ImFriendService {
                     Constants.CallbackCommand.DeleteBlack,
                     JSONObject.toJSONString(req));
         }
+
+        // 删除黑名单-多端数据同步
+        // A从黑名单中将B删除，需要通知用户A除去本端的其他客户端
+        DeleteBlackPack deleteBlackPack = new DeleteBlackPack();
+        BeanUtils.copyProperties(req, deleteBlackPack);
+        messageProducer.sendToUser(req.getFromId(), req.getClientType(), req.getImei(),
+                FriendshipEventCommand.FRIEND_BLACK_DELETE, deleteBlackPack, req.getAppId());
 
         return ResponseVO.success();
     }

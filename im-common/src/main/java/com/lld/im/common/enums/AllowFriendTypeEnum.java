@@ -1,5 +1,8 @@
 package com.lld.im.common.enums;
 
+/**
+ * 是否开启好友申请验证枚举类
+ */
 public enum AllowFriendTypeEnum {
 
     /**

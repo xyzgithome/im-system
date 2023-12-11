@@ -27,7 +27,7 @@ public interface ImFriendService {
 
     ResponseVO getRelation(GetRelationReq req);
 
-    ResponseVO doAddFriend(String fromId, FriendDto dto, Integer appId);
+    ResponseVO doAddFriend(AddFriendReq req);
 
     ResponseVO checkFriendship(CheckFriendShipReq req);
 

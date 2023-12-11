@@ -42,8 +42,4 @@ public class ImFriendShipRequestEntity {
 
     /** 序列号*/
     private Long sequence;
-
-
-
-
 }

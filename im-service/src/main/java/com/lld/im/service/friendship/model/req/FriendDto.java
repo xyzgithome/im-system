@@ -14,6 +14,9 @@ public class FriendDto {
 
     private String extra;
 
+    /**
+     * 好友验证信息
+     */
     private String addWording;
 
 }
