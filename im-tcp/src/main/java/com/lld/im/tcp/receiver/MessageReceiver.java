@@ -24,7 +24,6 @@ public class MessageReceiver {
 
     private static void startReceiverMessage () {
         try {
-
             String channelName = Constants.RabbitConstants.MessageService2Im + brokerId;
             String queueName = Constants.RabbitConstants.MessageService2Im + brokerId;
             String exchangeName = Constants.RabbitConstants.MessageService2Im;
