@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "appconfig")
 public class AppConfig {
-
+    /** appId对应的密钥key, 或者说盐值 */
     private String privateKey;
 
     /** zk连接地址*/
