@@ -37,6 +37,8 @@ public class GatewayInterceptor implements HandlerInterceptor {
             return false;
         }
 
+        // 接口调用方获取userSign的方式：用户通过appService登录app成功后，appService会给该用户生成一个userSign并返回，
+        // 然后用户在请求IMService的接口时带上该userSign进行接口鉴权
         String userSign = request.getParameter("userSign");
         if(StringUtils.isBlank(userSign)){
             resp(ResponseVO.fail(GateWayErrorCode.USERSIGN_NOT_EXIST),response);
