@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.lld.im.codec.pack.group.UpdateGroupMemberPack;
 import com.lld.im.common.ResponseVO;
+import com.lld.im.common.command.GroupEventCommand;
 import com.lld.im.common.enums.GroupErrorCode;
 import com.lld.im.common.enums.GroupMemberRoleEnum;
 import com.lld.im.common.enums.GroupStatusEnum;
 import com.lld.im.common.enums.GroupTypeEnum;
 import com.lld.im.common.exception.ApplicationException;
+import com.lld.im.common.model.ClientInfo;
 import com.lld.im.service.group.dao.ImGroupEntity;
 import com.lld.im.service.group.dao.ImGroupMemberEntity;
 import com.lld.im.service.group.dao.mapper.ImGroupMemberMapper;
@@ -20,6 +23,7 @@ import com.lld.im.service.group.service.ImGroupMemberService;
 import com.lld.im.service.group.service.ImGroupService;
 import com.lld.im.service.user.dao.ImUserDataEntity;
 import com.lld.im.service.user.service.ImUserService;
+import com.lld.im.service.utils.GroupMessageProducer;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
@@ -56,9 +60,11 @@ public class ImGroupMemberServiceImpl implements ImGroupMemberService {
     @Value("${admin.enable}")
     private boolean isAdmin;
 
+    @Resource
+    private GroupMessageProducer groupMessageProducer;
+
     @Override
     public ResponseVO importGroupMember(ImportGroupMemberReq req) {
-
         List<AddMemberResp> resp = new ArrayList<>();
 
         ResponseVO<ImGroupEntity> groupResp = groupService.getGroup(req.getGroupId(), req.getAppId());
@@ -350,7 +356,6 @@ public class ImGroupMemberServiceImpl implements ImGroupMemberService {
 
     @Override
     public ResponseVO updateGroupMember(UpdateGroupMemberReq req) {
-
         ResponseVO<ImGroupEntity> group = groupService.getGroup(req.getGroupId(), req.getAppId());
         if (!group.isOk()) {
             return group;
@@ -396,7 +401,7 @@ public class ImGroupMemberServiceImpl implements ImGroupMemberService {
                 boolean isOwner = roleInfo == GroupMemberRoleEnum.OWNER.getCode();
                 boolean isManager = roleInfo == GroupMemberRoleEnum.MAMAGER.getCode();
 
-                //不是管理员不能修改权限
+                //不是管理员不能修改权限属性值
                 if (req.getRole() != null && !isOwner && !isManager) {
                     return ResponseVO.fail(GroupErrorCode.THIS_OPERATE_NEED_MANAGER_ROLE);
                 }
@@ -425,6 +430,12 @@ public class ImGroupMemberServiceImpl implements ImGroupMemberService {
         objectUpdateWrapper.eq("member_id", req.getMemberId());
         objectUpdateWrapper.eq("group_id", req.getGroupId());
         imGroupMemberMapper.update(update, objectUpdateWrapper);
+
+        // 发送消息通知TCP服务
+        UpdateGroupMemberPack updateGroupMemberPack = new UpdateGroupMemberPack();
+        BeanUtils.copyProperties(req, updateGroupMemberPack);
+        groupMessageProducer.producer(req.getOperator(), GroupEventCommand.UPDATED_MEMBER,
+                updateGroupMemberPack, new ClientInfo(req.getAppId(), req.getClientType(), req.getImei()));
 
         return ResponseVO.success();
     }

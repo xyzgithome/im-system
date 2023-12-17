@@ -62,6 +62,7 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Message> {
             userSession.setConnectState(ImConnectStatusEnum.ONLINE_STATUS.getCode());
             userSession.setBrokerHost(InetAddress.getLocalHost().getHostAddress());
             userSession.setBrokerId(brokerId);
+            userSession.setImei(header.getImei());
 
             // 存入redis map中
             RedissonClient redissonClient = RedisManager.getRedissonClient();
